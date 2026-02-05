@@ -58,7 +58,7 @@ include(src/CMake/main.cmake)
 # 各个作业模块 - 每个作业生成一个独立的 exe
 # 取消注释以启用对应作业
 add_subdirectory(src/homework0)
-# add_subdirectory(src/homework1)
+add_subdirectory(src/homework1)
 # add_subdirectory(src/homework2)
 # add_subdirectory(src/homework3)
 # add_subdirectory(src/homework4)

@@ -2,3 +2,4 @@
 build/
 bin/
 src/3rd/windows/eigen/
+src/3rd/windows/opencv/
