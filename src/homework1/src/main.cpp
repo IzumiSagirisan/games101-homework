@@ -37,8 +37,6 @@ Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     // Students will implement this function
 
     Matrix4f projection = Matrix4f::Identity();
-
-    // TODO: Implement this function
     // Create the projection matrix for the given parameters.
     // Then return it.
 
@@ -78,6 +76,35 @@ Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     projection = orthoScale * orthoTranslate * perspToOrtho;
 
     return projection;
+}
+
+Eigen::Matrix4f get_rotation(Vector3f axis, float angle) {
+    axis.normalize();
+
+    Matrix3f rotation = Matrix3f::Zero();
+    // 逐步构造公式
+    float rad = angle * MY_PI / 180;
+
+    Matrix3f i = Matrix3f::Identity();
+    Matrix3f part1 = cos(rad) * i;
+
+    Matrix3f part2 = (1 - cos(rad)) * (axis * axis.transpose());
+
+    Matrix3f nn = Matrix3f::Zero();
+    nn(0, 1) = -axis.z();
+    nn(0, 2) = axis.y();
+    nn(1, 0) = axis.z();
+    nn(1, 2) = -axis.x();
+    nn(2, 0) = -axis.y();
+    nn(2, 1) = axis.x();
+    Matrix3f part3 = sin(rad) * nn;
+
+    rotation = part1 + part2 + part3;
+
+    Matrix4f result = Matrix4f::Identity();
+    result.block<3, 3>(0, 0) = rotation;
+
+    return result;
 }
 
 int main(int argc, const char **argv) {
