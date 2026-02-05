@@ -6,10 +6,10 @@
 
 constexpr double MY_PI = 3.1415926;
 
-Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos) {
-    Eigen::Matrix4f view = Eigen::Matrix4f::Identity();
+Matrix4f get_view_matrix(Vector3f eye_pos) {
+    Matrix4f view = Matrix4f::Identity();
 
-    Eigen::Matrix4f translate;
+    Matrix4f translate;
     translate << 1, 0, 0, -eye_pos[0], 0, 1, 0, -eye_pos[1], 0, 0, 1, -eye_pos[2],
             0, 0, 0, 1;
 
@@ -18,25 +18,64 @@ Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos) {
     return view;
 }
 
-Eigen::Matrix4f get_model_matrix(float rotation_angle) {
-    Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
+Matrix4f get_model_matrix(float rotation_angle) {
+    Matrix4f model = Matrix4f::Identity();
+    float rad = rotation_angle * MY_PI / 180.0f;
 
-    // TODO: Implement this function
     // Create the model matrix for rotating the triangle around the Z axis.
     // Then return it.
+    model(0, 0) = cos(rad);
+    model(0, 1) = -sin(rad);
+    model(1, 0) = sin(rad);
+    model(1, 1) = cos(rad);
 
     return model;
 }
 
-Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
-                                      float zNear, float zFar) {
+Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
+                                float zNear, float zFar) {
     // Students will implement this function
 
-    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
+    Matrix4f projection = Matrix4f::Identity();
 
     // TODO: Implement this function
     // Create the projection matrix for the given parameters.
     // Then return it.
+
+    // 计算lr,nf,tb的值，随后根据分解矩阵求解
+    // 需要注意，t必须是正数，因为t表示近平面上边界在y方向的坐标（高度），这是一个长度，必须是正数
+    // 同样，n表示近平面离相机的距离。因为GAMES101中认为相机是看向-z轴，为了表示数轴上的真实位置，可以进行取反处理
+    float l, r, n, f, t, b;
+    n = -zNear;
+    f = -zFar;
+
+    // 注意，n是在数轴上更大的值，因此应该对应t，因为t必须要是正的，因此这里取-n
+    t = -n * tan(eye_fov * MY_PI / 180 / 2);
+    b = -t;
+
+    r = aspect_ratio * t;
+    l = aspect_ratio * b;
+
+    // 构造透视投影转正交投影矩阵
+    Matrix4f perspToOrtho = Matrix4f::Zero();
+    perspToOrtho(0, 0) = n;
+    perspToOrtho(1, 1) = n;
+    perspToOrtho(2, 2) = n + f;
+    perspToOrtho(2, 3) = - n * f;
+    perspToOrtho(3, 2) = 1;
+
+    Matrix4f orthoTranslate = Matrix4f::Identity();
+    orthoTranslate(0, 3) = -(l + r) / 2;
+    orthoTranslate(1, 3) = -(t + b) / 2;
+    orthoTranslate(2, 3) = -(f + n) / 2;
+
+    Matrix4f orthoScale = Matrix4f::Identity();
+    orthoScale(0, 0) = 2 / (r - l);
+    orthoScale(1, 1) = 2 / (t - b);
+    orthoScale(2, 2) = 2 / (n - f);
+
+    // 矩阵合成
+    projection = orthoScale * orthoTranslate * perspToOrtho;
 
     return projection;
 }
@@ -56,11 +95,11 @@ int main(int argc, const char **argv) {
 
     rst::rasterizer r(700, 700);
 
-    Eigen::Vector3f eye_pos = {0, 0, 5};
+    Vector3f eye_pos = {0, 0, 5};
 
-    std::vector<Eigen::Vector3f> pos{{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};
+    std::vector<Vector3f> pos{{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};
 
-    std::vector<Eigen::Vector3i> ind{{0, 1, 2}};
+    std::vector<Vector3i> ind{{0, 1, 2}};
 
     auto pos_id = r.load_positions(pos);
     auto ind_id = r.load_indices(ind);
