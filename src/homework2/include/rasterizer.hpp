@@ -67,6 +67,7 @@ namespace rst
         void set_projection(const Matrix4f& p);
 
         void set_pixel(const Vector3f& point, const Vector3f& color);
+        void set_sample_pixel(int x, int y, int i, int j, const Vector3f& color);
 
         void clear(Buffers buff);
 
@@ -91,9 +92,12 @@ namespace rst
         std::map<int, std::vector<Vector3f>> col_buf;   // 颜色缓冲，告诉渲染器三角形的颜色是什么
 
         std::vector<Vector3f> frame_buf;    // 帧缓冲，表示屏幕上的每个像素点对应的颜色值
+        std::vector<Vector3f> sample_frame_buf; // SSAA帧缓冲
 
         std::vector<float> depth_buf;
+        std::vector<float> sample_depth_buf;    // 深度缓冲，应用SSAA，需要将其改为每个像素点四个采样区域
         int get_index(int x, int y);
+        int get_sample_index(int x, int y, int i, int j);   // 获取SSAA的深度缓冲索引
 
         int width, height;
 

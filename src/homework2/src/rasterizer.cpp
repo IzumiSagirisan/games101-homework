@@ -132,19 +132,37 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
 
     for (int x = minX; x <= maxX; ++x) {
         for (int y = minY; y <= maxY; ++y) {
-            if (insideTriangle(A, B, C, {x, y})) {
-                // 获得深度缓冲插值值
-                auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-                float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                z_interpolated *= w_reciprocal;
+            // SSAA 对每个像素点采样四次
+            for (int i = 0; i < 2; ++i) {
+                for (int j = 0; j < 2; ++j) {
 
-                if (z_interpolated < depth_buf[get_index(x, y)]) {
-                    depth_buf[get_index(x, y)] = z_interpolated;
-                    Vector3f currentPoint(x, y, 0);
-                    set_pixel(currentPoint, t.getColor());
+                    if (insideTriangle(A, B, C, {x + 0.25 + 0.5 * i, y + 0.25 + 0.5 * j})) {
+
+                        // 获得深度缓冲插值值
+                        auto[alpha, beta, gamma] = computeBarycentric2D(x + 0.25 + 0.5 * i, y + 0.25 + 0.5 * j, t.v);
+                        float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                        float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                        z_interpolated *= w_reciprocal;
+
+                        // 每个子采样点有自己的深度缓冲索引
+                        int sample_index = get_sample_index(x, y, i ,j);
+
+                        if (z_interpolated < sample_depth_buf[sample_index]) {
+                            sample_depth_buf[sample_index] = z_interpolated;
+                            set_sample_pixel(x, y, i, j, t.getColor());
+                        }
+                    }
+
                 }
             }
+
+            // 合并四个上采样点
+            Vector3f final_color =(
+                sample_frame_buf[get_sample_index(x, y, 0,0)] +
+                sample_frame_buf[get_sample_index(x, y, 0,1)] +
+                sample_frame_buf[get_sample_index(x, y, 1,0)] +
+                sample_frame_buf[get_sample_index(x, y, 1,1)] )/4.0;
+            set_pixel(Vector3f(x, y, 0), final_color);
         }
     }
 
@@ -178,22 +196,30 @@ void rst::rasterizer::clear(rst::Buffers buff)
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color)
     {
         std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+        std::fill(sample_frame_buf.begin(), sample_frame_buf.end(), Eigen::Vector3f{0, 0, 0});
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth)
     {
         std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
+        std::fill(sample_depth_buf.begin(), sample_depth_buf.end(), std::numeric_limits<float>::infinity());
     }
 }
 
 rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
+    sample_frame_buf.resize(w * h * 4);
     depth_buf.resize(w * h);
+    sample_depth_buf.resize(w * h * 4); // SSAA 对深度缓冲扩容
 }
 
 int rst::rasterizer::get_index(int x, int y)
 {
-    return (height-1-y)*width + x;
+    return (height - 1 - y) * width + x;
+}
+
+int rst::rasterizer::get_sample_index(int x, int y, int i, int j) {
+    return ((height - 1 - y) * width + x) * 4 + i * 2 + j;
 }
 
 void rst::rasterizer::set_pixel(const Eigen::Vector3f& point, const Eigen::Vector3f& color)
@@ -202,6 +228,10 @@ void rst::rasterizer::set_pixel(const Eigen::Vector3f& point, const Eigen::Vecto
     auto ind = (height-1-point.y())*width + point.x();
     frame_buf[ind] = color;
 
+}
+
+void rst::rasterizer::set_sample_pixel(int x, int y, int i, int j, const Vector3f &color) {
+    sample_frame_buf[((height - 1 - y) * width + x) * 4 + i * 2 + j] = color;
 }
 
 // clang-format on
