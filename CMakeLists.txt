@@ -59,7 +59,7 @@ include(src/CMake/main.cmake)
 # 取消注释以启用对应作业
 add_subdirectory(src/homework0)
 add_subdirectory(src/homework1)
-# add_subdirectory(src/homework2)
+add_subdirectory(src/homework2)
 # add_subdirectory(src/homework3)
 # add_subdirectory(src/homework4)
 # add_subdirectory(src/homework5)
