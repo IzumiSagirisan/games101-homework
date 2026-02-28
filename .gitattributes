@@ -1,0 +1,16 @@
+# 二进制文件（图片、3D模型二进制等）
+*.jpg binary
+*.JPG binary
+*.png binary
+*.tif binary
+*.blend binary
+*.3ds binary
+*.mtl binary
+*.svg binary
+*.obj binary
+
+
+# 文本文件（需要统一行尾）
+*.cpp text
+*.h text
+*.txt text
